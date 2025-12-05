@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Palpation Checklist</title>
+
+<style>
+    :root{
+        --max-width:1000px;
+        --accent:#4CAF50;
+        --muted:#f7f7f7;
+        --card:#ffffff;
+        --blue:#0275d8;
+        --danger:#d9534f;
+        --gold:#f0ad4e;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        background: var(--muted);
+        max-width: var(--max-width);
+        margin: auto;
+        color: #222;
+
+        /* temporary padding before JS adjusts it */
+        padding-top: 160px;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+
+    /* FIXED TOP HEADER */
+    #fixedTop {
+        position: fixed;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: var(--max-width);
+        background: var(--muted);
+        z-index: 999;
+        padding: 10px 20px 15px 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    h1 {
+        text-align: center;
+        margin: 6px 0 10px 0;
+        font-weight: 700;
+        font-size: 22px;
+    }
+
+    .top-row {
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+    }
+
+    /* progress bar */
+    #progressBarContainer {
+        width: 100%;
+        background: #ddd;
+        border-radius: 12px;
+        overflow:hidden;
+        height:34px;
+    }
+    #progressBar {
+        height: 34px;
+        width: 0%;
+        background: var(--accent);
+        text-align: center;
+        color: white;
+        line-height: 34px;
+        font-weight: bold;
+        transition: width 200ms ease;
+    }
+
+    /* timer */
+    #timerBox {
+        text-align: center;
+        font-size: 22px;
+        font-weight: bold;
+        padding:8px 12px;
+        border-radius:8px;
+        background:#fff;
+        box-shadow:0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    #timerButtons {
+        display:flex;
+        gap:8px;
+        justify-content:center;
+        flex-wrap:wrap;
+        margin-top:6px;
+    }
+
+    button {
+        padding: 8px 12px;
+        border: none;
+        border-radius: 6px;
+        background: var(--accent);
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    .btn-clear { background: var(--danger); }
+    .btn-checkall { background: var(--blue); }
+    .btn-pause { background: var(--gold); }
+    .btn-ghost {
+        background: transparent;
+        color: #222;
+        border: 1px solid #ddd;
+    }
+
+    /* sections/cards */
+    .section {
+        background: var(--card);
+        padding: 18px;
+        margin-bottom: 16px;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .section h2 {
+        margin: 0 0 10px 0;
+        border-left: 6px solid var(--accent);
+        padding-left: 12px;
+        font-size: 18px;
+    }
+
+    /* task rows */
+    .task {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 10px 0;
+    }
+
+    input[type="checkbox"]{
+        width:28px;
+        height:28px;
+    }
+
+    /* iPhone small screen optimization */
+    @media (max-width:600px){
+        body { padding-left: 12px; padding-right: 12px; }
+        h1 { font-size: 20px; }
+        #timerBox { font-size: 20px; }
+        button { font-size: 13px; }
+        input[type=checkbox] { width:26px; height:26px; }
+    }
+</style>
+</head>
+
+<body>
+
+<!-- ========================================== -->
+<!-- FIXED TOP BAR -->
+<!-- ========================================== -->
+<div id="fixedTop">
+    <h1>Palpation Exam Checklist</h1>
+
+    <div class="top-row">
+        <div id="progressBarContainer">
+            <div id="progressBar">0%</div>
+        </div>
+
+        <div style="width:100%; text-align:center;">
+            <div id="timerBox">30:00</div>
+            <div id="timerButtons">
+                <button onclick="startTimer()">Start</button>
+                <button class="btn-pause" onclick="pauseTimer()">Pause</button>
+                <button class="btn-ghost" onclick="resetTimer()">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div style="text-align:center; margin-top:10px;">
+        <button class="btn-checkall" onclick="checkAll()">Check All</button>
+        <button class="btn-clear" onclick="clearAll()">Clear All</button>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- JAVASCRIPT -->
+<!-- ========================================== -->
+
+<script>
+/* Auto-adjust padding so header never blocks content */
+window.addEventListener("load", adjustTopPadding);
+window.addEventListener("resize", adjustTopPadding);
+
+function adjustTopPadding() {
+    const fixed = document.getElementById("fixedTop");
+    if (!fixed) return;
+    const headerHeight = fixed.offsetHeight + 10; // extra margin
+    document.body.style.paddingTop = headerHeight + "px";
+}
+</script>
+
+<script>
+// ------------------- TIMER -------------------
+let timer;
+let timeLeft = 1800; // 30 minutes
+let isRunning = false;
+
+function updateTimerDisplay() {
+    let min = String(Math.floor(timeLeft / 60)).padStart(2,'0');
+    let sec = String(timeLeft % 60).padStart(2,'0');
+    document.getElementById('timerBox').innerText = `${min}:${sec}`;
+}
+function startTimer() {
+    if (isRunning) return;
+    isRunning = true;
+    timer = setInterval(() => {
+        if (timeLeft > 0) { timeLeft--; updateTimerDisplay(); }
+        else { pauseTimer(); }
+    }, 1000);
+}
+function pauseTimer() {
+    clearInterval(timer);
+    isRunning = false;
+}
+function resetTimer() {
+    pauseTimer();
+    timeLeft = 1800;
+    updateTimerDisplay();
+}
+
+// ------------------- CHECKBOX PROGRESS -------------------
+function updateProgress() {
+    const all = document.querySelectorAll('input[type=checkbox]').length;
+    const checked = document.querySelectorAll('input[type=checkbox]:checked').length;
+    const percent = Math.round((checked / all) * 100);
+    const bar = document.getElementById('progressBar');
+    bar.style.width = percent + '%';
+    bar.innerText = percent + '%';
+}
+function checkAll() {
+    document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = true);
+    updateProgress();
+}
+function clearAll() {
+    document.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+    updateProgress();
+}
+</script>
+
+<!-- ========================================== -->
+<!-- SECTION BUILDER -->
+<!-- ========================================== -->
+
+<script>
+let sectionNumber = 1;
+function buildSection(title, tasks) {
+    const section = document.createElement('div');
+    section.className = 'section';
+    const h2 = document.createElement('h2');
+    h2.textContent = `${sectionNumber}. ${title}`;
+    section.appendChild(h2);
+
+    tasks.forEach((t, i) => {
+        const row = document.createElement('div');
+        row.className = 'task';
+
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.innerHTML = `<strong>${i + 1}.</strong> ${t}`;
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.onchange = updateProgress;
+
+        row.appendChild(label);
+        row.appendChild(cb);
+        section.appendChild(row);
+    });
+
+    document.body.appendChild(section);
+    sectionNumber++;
+}
+</script>
+
+<!-- ========================================== -->
+<!-- ALL SECTIONS -->
+<!-- ========================================== -->
+
+<script>
+buildSection("Introduction", [
+    "Set up for Foot Support",
+    "Set up head stool and pillow",
+    "Self introduction",
+    "Ask for consent"
+]);
+
+buildSection("Palpation (Cervical)", [
+    "C1 L / R Anterior",
+    "C2-7",
+    "Spine sweep (thoracic - sacrum)",
+    "Iliac crest L / R inferior",
+    "PSIS L / R Superior",
+    "Patient side-lying position",
+    "C1 (lateral)",
+    "C2-7 (lateral) — patient turn 180° and repeat"
+]);
+
+buildSection("Palpation (Pelvic)", [
+    "Leg Long",
+    "Leg swing",
+    "Pelvic rotation L / R hip posterior rotation",
+    "Pelvic tilt L / R hip inferior",
+    "Pelvic torsion L / R ASIS superior"
+]);
+
+buildSection("Palpation (Femur)", [
+    "Leg swing",
+    "Palpate Greater Trochanters",
+    "Adjust Greater Trochanters (if required)"
+]);
+
+buildSection("Palpation (Fibula)", [
+    "Leg swing",
+    "Palpate fibular head",
+    "Adjust fibular head (if required)"
+]);
+
+buildSection("Foot Mobility", [
+    "Palpate Peroneal Trochlea",
+    "Heel Circling",
+    "Scissor Adjustment ankle joint",
+    "Foot circling",
+    "Midtarsal joint mobilization (洗衣機)",
+    "Midtarsal joint mobilization (扭毛巾)",
+    "Metatarsal counter mobilization (kitkat)",
+    "Toes Flexion & Extension",
+    "Toe Distractions",
+    "Strokes / Massage Lymphatics (Switch to another foot)"
+]);
+
+buildSection("Anterior Ribs", [
+    "Sternum palpation",
+    "Anterior rib adjustment (left)",
+    "Anterior rib adjustment (right)"
+]);
+
+buildSection("Prone", ["Prone Spine Swipe"]);
+buildSection("123 , 123, 123", ["123 , 123, 123"]);
+buildSection("Find TP", ["Find TP"]);
+
+buildSection("Posterior Ribs", [
+    "Posterior Ribs Palpate",
+    "Spine Swipe"
+]);
+
+buildSection("Massage", [
+    "Circle Motion x3 times (add pillow to patient legs)",
+    "Scrubbing Motion x3 times",
+    "Herringbone Motion x3 times",
+    "Stroking Motion x6 times",
+    "Further sweep"
+]);
+
+buildSection("Palpation (Cervical) — Seated", [
+    "Patient seated Position",
+    "C1 Atlas",
+    "C2-7",
+    "Spine sweep (thoracic - sacrum)",
+    "Iliac crest",
+    "PSIS"
+]);
+
+updateProgress();
+</script>
+
+</body>
+</html>
