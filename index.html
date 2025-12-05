@@ -23,13 +23,12 @@
         margin: auto;
         color: #222;
 
-        /* temporary padding before JS adjusts it */
         padding-top: 160px;
         padding-left: 20px;
         padding-right: 20px;
     }
 
-    /* FIXED TOP HEADER */
+    /* Fixed top header */
     #fixedTop {
         position: fixed;
         top: 0;
@@ -39,7 +38,7 @@
         max-width: var(--max-width);
         background: var(--muted);
         z-index: 999;
-        padding: 10px 20px 15px 20px;
+        padding: 10px 20px 15px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
 
@@ -50,13 +49,9 @@
         font-size: 22px;
     }
 
-    .top-row {
-        display:flex;
-        flex-direction:column;
-        gap:10px;
-    }
+    .top-row { display:flex; flex-direction:column; gap:10px; }
 
-    /* progress bar */
+    /* Progress bar */
     #progressBarContainer {
         width: 100%;
         background: #ddd;
@@ -75,7 +70,7 @@
         transition: width 200ms ease;
     }
 
-    /* timer */
+    /* Timer */
     #timerBox {
         text-align: center;
         font-size: 22px;
@@ -85,7 +80,6 @@
         background:#fff;
         box-shadow:0 1px 4px rgba(0,0,0,0.08);
     }
-
     #timerButtons {
         display:flex;
         gap:8px;
@@ -112,7 +106,7 @@
         border: 1px solid #ddd;
     }
 
-    /* sections/cards */
+    /* Sections */
     .section {
         background: var(--card);
         padding: 18px;
@@ -127,35 +121,48 @@
         font-size: 18px;
     }
 
-    /* task rows */
+    /* Task row */
     .task {
         display: flex;
-        align-items: center;
         justify-content: space-between;
+        align-items: center;
         margin: 10px 0;
+        gap: 12px;
     }
 
-    input[type="checkbox"]{
-        width:28px;
-        height:28px;
+    /* regular checkbox */
+    .single-check {
+        width: 26px;
+        height: 26px;
     }
 
-    /* iPhone small screen optimization */
+    /* 1 / 2 double-checkbox layout */
+    .double-box {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .double-box label {
+        font-size: 14px;
+        font-weight: bold;
+    }
+    .double-box input[type="checkbox"] {
+        width: 24px;
+        height: 24px;
+    }
+
     @media (max-width:600px){
         body { padding-left: 12px; padding-right: 12px; }
         h1 { font-size: 20px; }
         #timerBox { font-size: 20px; }
         button { font-size: 13px; }
-        input[type=checkbox] { width:26px; height:26px; }
     }
 </style>
 </head>
 
 <body>
 
-<!-- ========================================== -->
 <!-- FIXED TOP BAR -->
-<!-- ========================================== -->
 <div id="fixedTop">
     <h1>Palpation Exam Checklist</h1>
 
@@ -180,27 +187,23 @@
     </div>
 </div>
 
-<!-- ========================================== -->
-<!-- JAVASCRIPT -->
-<!-- ========================================== -->
-
 <script>
-/* Auto-adjust padding so header never blocks content */
+/* Adjust body padding so fixed header doesn't cover content */
 window.addEventListener("load", adjustTopPadding);
 window.addEventListener("resize", adjustTopPadding);
 
 function adjustTopPadding() {
     const fixed = document.getElementById("fixedTop");
     if (!fixed) return;
-    const headerHeight = fixed.offsetHeight + 10; // extra margin
+    const headerHeight = fixed.offsetHeight + 10;
     document.body.style.paddingTop = headerHeight + "px";
 }
 </script>
 
 <script>
-// ------------------- TIMER -------------------
+/* Timer */
 let timer;
-let timeLeft = 1800; // 30 minutes
+let timeLeft = 1800;
 let isRunning = false;
 
 function updateTimerDisplay() {
@@ -216,17 +219,14 @@ function startTimer() {
         else { pauseTimer(); }
     }, 1000);
 }
-function pauseTimer() {
-    clearInterval(timer);
-    isRunning = false;
-}
+function pauseTimer() { clearInterval(timer); isRunning = false; }
 function resetTimer() {
-    pauseTimer();
-    timeLeft = 1800;
-    updateTimerDisplay();
+    pauseTimer(); timeLeft = 1800; updateTimerDisplay();
 }
+</script>
 
-// ------------------- CHECKBOX PROGRESS -------------------
+<script>
+/* Progress tracking */
 function updateProgress() {
     const all = document.querySelectorAll('input[type=checkbox]').length;
     const checked = document.querySelectorAll('input[type=checkbox]:checked').length;
@@ -245,33 +245,68 @@ function clearAll() {
 }
 </script>
 
-<!-- ========================================== -->
-<!-- SECTION BUILDER -->
-<!-- ========================================== -->
-
 <script>
+/* Section Builder */
 let sectionNumber = 1;
+
+function buildTaskRow(labelText, double = false) {
+    const row = document.createElement("div");
+    row.className = "task";
+
+    const label = document.createElement("div");
+    label.className = "label";
+    label.innerHTML = labelText;
+
+    row.appendChild(label);
+
+    if (!double) {
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.className = "single-check";
+        cb.onchange = updateProgress;
+        row.appendChild(cb);
+    } else {
+        const wrap = document.createElement("div");
+        wrap.className = "double-box";
+
+        const l1 = document.createElement("label");
+        l1.textContent = "1";
+        const c1 = document.createElement("input");
+        c1.type = "checkbox";
+        c1.onchange = updateProgress;
+
+        const l2 = document.createElement("label");
+        l2.textContent = "2";
+        const c2 = document.createElement("input");
+        c2.type = "checkbox";
+        c2.onchange = updateProgress;
+
+        wrap.appendChild(l1);
+        wrap.appendChild(c1);
+        wrap.appendChild(l2);
+        wrap.appendChild(c2);
+
+        row.appendChild(wrap);
+    }
+
+    return row;
+}
+
 function buildSection(title, tasks) {
     const section = document.createElement('div');
     section.className = 'section';
+
     const h2 = document.createElement('h2');
     h2.textContent = `${sectionNumber}. ${title}`;
     section.appendChild(h2);
 
-    tasks.forEach((t, i) => {
-        const row = document.createElement('div');
-        row.className = 'task';
-
-        const label = document.createElement('div');
-        label.className = 'label';
-        label.innerHTML = `<strong>${i + 1}.</strong> ${t}`;
-
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.onchange = updateProgress;
-
-        row.appendChild(label);
-        row.appendChild(cb);
+    tasks.forEach(t => {
+        let row;
+        if (t.double) {
+            row = buildTaskRow(`<strong>${t.num}.</strong> ${t.text}`, true);
+        } else {
+            row = buildTaskRow(`<strong>${t.num}.</strong> ${t.text}`, false);
+        }
         section.appendChild(row);
     });
 
@@ -280,92 +315,100 @@ function buildSection(title, tasks) {
 }
 </script>
 
-<!-- ========================================== -->
-<!-- ALL SECTIONS -->
-<!-- ========================================== -->
-
+<!-- BUILD ALL SECTIONS -->
 <script>
 buildSection("Introduction", [
-    "Set up for Foot Support",
-    "Set up head stool and pillow",
-    "Self introduction",
-    "Ask for consent"
+    { num:1, text:"Set up for Foot Support" },
+    { num:2, text:"Set up head stool and pillow" },
+    { num:3, text:"Self introduction" },
+    { num:4, text:"Ask for consent" }
 ]);
 
 buildSection("Palpation (Cervical)", [
-    "C1 L / R Anterior",
-    "C2-7",
-    "Spine sweep (thoracic - sacrum)",
-    "Iliac crest L / R inferior",
-    "PSIS L / R Superior",
-    "Patient side-lying position",
-    "C1 (lateral)",
-    "C2-7 (lateral) — patient turn 180° and repeat"
+    { num:1, text:"C1 L / R Anterior" },
+    { num:2, text:"C2-7" },
+    { num:3, text:"Spine sweep (thoracic - sacrum)" },
+    { num:4, text:"Iliac crest L / R inferior" },
+    { num:5, text:"PSIS L / R Superior" },
+    { num:6, text:"Patient side-lying position" },
+
+    { num:7, text:"C1 (lateral)", double:true },
+
+    { num:8, text:"C2-7 (lateral) — patient turn 180° and repeat", double:true }
 ]);
 
 buildSection("Palpation (Pelvic)", [
-    "Leg Long",
-    "Leg swing",
-    "Pelvic rotation L / R hip posterior rotation",
-    "Pelvic tilt L / R hip inferior",
-    "Pelvic torsion L / R ASIS superior"
+    { num:1, text:"Leg Long? (ask katie)" },
+    { num:2, text:"Leg swing? (ask katie)" },
+    { num:3, text:"Pelvic rotation L / R hip posterior rotation" },
+    { num:4, text:"Pelvic tilt L / R hip inferior" },
+    { num:5, text:"Pelvic torsion L / R ASIS superior" }
 ]);
 
 buildSection("Palpation (Femur)", [
-    "Leg swing",
-    "Palpate Greater Trochanters",
-    "Adjust Greater Trochanters (if required)"
+    { num:1, text:"Leg swing? (ask katie)" },
+    { num:2, text:"Palpate Greater Trochanters" },
+    { num:3, text:"Adjust Greater Trochanters (if required)" }
 ]);
 
 buildSection("Palpation (Fibula)", [
-    "Leg swing",
-    "Palpate fibular head",
-    "Adjust fibular head (if required)"
+    { num:1, text:"Leg swing? (ask katie)" },
+    { num:2, text:"Palpate fibular head" },
+    { num:3, text:"Adjust fibular head (if required)" }
 ]);
 
 buildSection("Foot Mobility", [
-    "Palpate Peroneal Trochlea",
-    "Heel Circling",
-    "Scissor Adjustment ankle joint",
-    "Foot circling",
-    "Midtarsal joint mobilization (洗衣機)",
-    "Midtarsal joint mobilization (扭毛巾)",
-    "Metatarsal counter mobilization (kitkat)",
-    "Toes Flexion & Extension",
-    "Toe Distractions",
-    "Strokes / Massage Lymphatics (Switch to another foot)"
+    { num:1, text:"Palpate Peroneal Trochlea L / R more protruding" },
+
+    { num:2, text:"Heel Circling", double:true },
+    { num:3, text:"Scissor Adjustment ankle joint", double:true },
+    { num:4, text:"Foot circling", double:true },
+    { num:5, text:"Midtarsal joint mobilization (洗衣機)", double:true },
+    { num:6, text:"Midtarsal joint mobilization (扭毛巾)", double:true },
+    { num:7, text:"Metatarsal counter mobilization (kitkat)", double:true },
+    { num:8, text:"Toes Flexion & Extension", double:true },
+    { num:9, text:"Toe Distractions", double:true },
+    { num:10, text:"Strokes / Massage Lymphatics (Switch to another foot)", double:true }
 ]);
 
 buildSection("Anterior Ribs", [
-    "Sternum palpation",
-    "Anterior rib adjustment (left)",
-    "Anterior rib adjustment (right)"
+    { num:1, text:"Sternum palpation" },
+    { num:2, text:"Anterior rib adjustment (left)" },
+    { num:3, text:"Anterior rib adjustment (right)" }
 ]);
 
-buildSection("Prone", ["Prone Spine Swipe"]);
-buildSection("123 , 123, 123", ["123 , 123, 123"]);
-buildSection("Find TP", ["Find TP"]);
+buildSection("Prone", [
+    { num:1, text:"Prone Spine Swipe" }
+]);
+
+buildSection("123 , 123, 123", [
+    { num:1, text:"123 , 123, 123" }
+]);
+
+buildSection("Find TP", [
+    { num:1, text:"Find TP" }
+]);
 
 buildSection("Posterior Ribs", [
-    "Posterior Ribs Palpate",
-    "Spine Swipe"
+    { num:1, text:"Posterior Ribs Palpate" },
+    { num:2, text:"Spine Swipe" }
 ]);
 
 buildSection("Massage", [
-    "Circle Motion x3 times (add pillow to patient legs)",
-    "Scrubbing Motion x3 times",
-    "Herringbone Motion x3 times",
-    "Stroking Motion x6 times",
-    "Further sweep"
+    { num:1, text:"Circle Motion x3 times (add pillow to patient legs)" },
+    { num:2, text:"Scrubbing Motion x3 times" },
+    { num:3, text:"Herringbone Motion x3 times" },
+    { num:4, text:"Stroking Motion x6 times" },
+    { num:5, text:"Further sweep" }
 ]);
 
 buildSection("Palpation (Cervical) — Seated", [
-    "Patient seated Position",
-    "C1 Atlas",
-    "C2-7",
-    "Spine sweep (thoracic - sacrum)",
-    "Iliac crest",
-    "PSIS"
+    { num:1, text:"Patient seated Position" },
+    { num:2, text:"C1 Atlas" },
+    { num:3, text:"C2-7" },
+    { num:4, text:"Spine sweep (thoracic - sacrum)" },
+    { num:5, text:"Iliac crest" },
+    { num:6, text:"PSIS" }
 ]);
 
 updateProgress();
